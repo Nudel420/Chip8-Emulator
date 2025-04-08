@@ -1,10 +1,13 @@
+#include "/include/raygui.h"
+#include "include/raylib.h"
 #include <stdio.h>
+// Following the Tutorial https://austinmorlan.com/posts/chip8_emulator/
 
-unsigned short opcode; // opcodes each 2 bytes long
+unsigned short opcode;      // opcodes each 2 bytes long
 unsigned char memory[4096]; // 4K RAM
-unsigned char V[16]; // general purpose registers ranging from V1 to VE
-unsigned short I; // Index register
-unsigned short pc; // program counter from 0x000 to 0xFFF
+unsigned char V[16];        // general purpose registers ranging from V1 to VE
+unsigned short I;           // Index register
+unsigned short pc;          // program counter from 0x000 to 0xFFF
 
 /*
     0x000-0x1FF -> Chip8 interpreter (contains font set in emu)
@@ -12,9 +15,17 @@ unsigned short pc; // program counter from 0x000 to 0xFFF
     0x200-0xFFF -> Program ROM and free RAM
   */
 
+int main(int argc, char *argv[]) {
+    const int window_width = 800;
+    const int window_height = 450;
 
+    InitWindow(window_width, window_height, "CHIP8 Emulator");
+    while (!WindowShouldClose()) {
+        BeginDrawing();
+        ClearBackground(RAYWHITE);
 
-int main (void){
-    printf("Hello World!\n");
+        DrawText("CHIP8 is awesome!", window_width / 2, window_height / 2, 32, BLACK);
+        EndDrawing();
+    }
     return 0;
 }
