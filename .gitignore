@@ -1,0 +1,4 @@
+*.exe
+.clang-format
+*.pdb
+*.rdbg
