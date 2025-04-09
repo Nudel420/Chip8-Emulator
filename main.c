@@ -2,6 +2,7 @@
 #include <stdint.h>
 
 // Following the Tutorial https://austinmorlan.com/posts/chip8_emulator/
+#define CELL_SIZE 10
 
 unsigned short opcode;      // opcodes each 2 bytes long
 unsigned char memory[4096]; // 4K RAM
@@ -17,15 +18,25 @@ unsigned short pc;          // program counter from 0x000 to 0xFFF
  ***********************************************************************/
 
 int main(int argc, char *argv[]) {
-    const int window_width = 800;
-    const int window_height = 450;
+    const int window_width = 64 * CELL_SIZE;
+    const int window_height = 32 * CELL_SIZE;
 
+    Color col = GRAY;
+    short col_switch = 0;
     InitWindow(window_width, window_height, "CHIP8 Emulator");
     while (!WindowShouldClose()) {
         BeginDrawing();
-        ClearBackground(RAYWHITE);
-
-        DrawText("CHIP8 is awesome!", window_width / 2, window_height / 2, 32, BLACK);
+        for (int i = 0; i < window_height; i++) {
+            for (int j = 0; j < window_width; j++) {
+                ClearBackground(RAYWHITE);
+                if (col_switch % 2 == 0) {
+                    col = BLACK;
+                } else {
+                    col = GRAY;
+                }
+                DrawRectangle(j * CELL_SIZE, i * CELL_SIZE, CELL_SIZE, CELL_SIZE, col);
+            }
+        }
         EndDrawing();
     }
     return 0;
