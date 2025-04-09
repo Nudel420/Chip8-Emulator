@@ -1,8 +1,4 @@
 *.exe
 .clang-format
 *.pdb
-<<<<<<< HEAD
-*.rdbg
-=======
 *rdbg
->>>>>>> b2829e78f80d84ccce81138472925cce952e7cc9

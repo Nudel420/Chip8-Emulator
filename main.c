@@ -1,6 +1,6 @@
-#include "/include/raygui.h"
 #include "include/raylib.h"
-#include <stdio.h>
+#include <stdint.h>
+
 // Following the Tutorial https://austinmorlan.com/posts/chip8_emulator/
 
 unsigned short opcode;      // opcodes each 2 bytes long
