@@ -1,43 +1,84 @@
 #include "include/raylib.h"
+#include <stdio.h>
 #include <stdint.h>
 
 // Following the Tutorial https://austinmorlan.com/posts/chip8_emulator/
-#define CELL_SIZE 10
 
-unsigned short opcode;      // opcodes each 2 bytes long
-unsigned char memory[4096]; // 4K RAM
-unsigned char V[16];        // general purpose registers ranging from V1 to VE
-unsigned short I;           // Index register
-unsigned short pc;          // program counter from 0x000 to 0xFFF
+/*******************************
+    Chip8 general memory layout
 
-/***********************************************************************
-                    Chip8 general memory layout
     0x000-0x1FF -> Chip8 interpreter (contains font set in emu)
     0x050-0x0A0 -> Used for the built in 4x5 pixel font set (0-F)
     0x200-0xFFF -> Program ROM and free RAM
- ***********************************************************************/
+ ********************************/
+
+/*********************************
+    16 key-layout on normal keyboard
+
+    Keypad       Keyboard
+    +-+-+-+-+    +-+-+-+-+
+    |1|2|3|C|    |1|2|3|4|
+    +-+-+-+-+    +-+-+-+-+
+    |4|5|6|D|    |Q|W|E|R|
+    +-+-+-+-+ => +-+-+-+-+
+    |7|8|9|E|    |A|S|D|F|
+    +-+-+-+-+    +-+-+-+-+
+    |A|0|B|F|    |Y|X|C|V|
+    +-+-+-+-+    +-+-+-+-+
+ *********************************/
+
+#define CELL_SIZE 10
+
+#define u8 uint8_t
+#define u16 uint16_t
+#define u32 uint32_t
+
+u8 registers[16]; // general purpose registers rangig from V1 to VE
+u8 memory[4096];  // 4K RAM
+u16 index_reg;    // index register
+u16 pc;           // program counter
+u16 stack[16];    // stack for storing instructions
+u8 sp;            // stack pointer
+u8 delay_timer;
+u8 sound_timer;
+u8 keypad[16];
+u32 video[64 * 32]; // video display array
+u16 opcode;         // opcodes each 2 bytes long
+
+const u16 START_ADRESS = 0x200; // 0x200 needs 12 bits to be displayed 512 in base 10
+
+void load_rom(const char* file_name){
+    FILE* rom = fopen(file_name, "r");
+    if (rom == NULL){
+        perror("Error opening the ROM!");
+        return;
+    } 
+
+}
 
 int main(int argc, char *argv[]) {
-    const int window_width = 64 * CELL_SIZE;
-    const int window_height = 32 * CELL_SIZE;
+  const int window_width = 64 * CELL_SIZE;
+  const int window_height = 32 * CELL_SIZE;
 
-    Color col = GRAY;
-    short col_switch = 0;
-    InitWindow(window_width, window_height, "CHIP8 Emulator");
-    while (!WindowShouldClose()) {
-        BeginDrawing();
-        for (int i = 0; i < window_height; i++) {
-            for (int j = 0; j < window_width; j++) {
-                ClearBackground(RAYWHITE);
-                if (col_switch % 2 == 0) {
-                    col = BLACK;
-                } else {
-                    col = GRAY;
-                }
-                DrawRectangle(j * CELL_SIZE, i * CELL_SIZE, CELL_SIZE, CELL_SIZE, col);
-            }
+  Color col = WHITE;
+  short col_switch = 0;
+  InitWindow(window_width, window_height, "CHIP8 Emulator");
+  while (!WindowShouldClose()) {
+    BeginDrawing();
+    ClearBackground(RAYWHITE);
+    for (int i = 0; i < window_height; i++) {
+      col_switch += 1;
+      for (int j = 0; j < window_width; j++) {
+        if (col_switch % 2 == 0) {
+          col = GRAY;
+        } else {
+          col = WHITE;
         }
-        EndDrawing();
+        DrawRectangle(j * CELL_SIZE, i * CELL_SIZE, CELL_SIZE, CELL_SIZE, col);
+        col_switch++;
+      }
     }
-    return 0;
+    EndDrawing();
+  }
+  return 0;
 }
