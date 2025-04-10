@@ -1,6 +1,6 @@
 #include "include/raylib.h"
-#include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
 
 // Following the Tutorial https://austinmorlan.com/posts/chip8_emulator/
 
@@ -45,18 +45,36 @@ u8 keypad[16];
 u32 video[64 * 32]; // video display array
 u16 opcode;         // opcodes each 2 bytes long
 
-const u16 START_ADRESS = 0x200; // 0x200 needs 12 bits to be displayed 512 in base 10
+#define START_ADRESS  0x200 // 0x200 needs 12 bits to be displayed 512 in base 10
 
-void load_rom(const char* file_name){
-    FILE* rom = fopen(file_name, "r");
-    if (rom == NULL){
-        perror("Error opening the ROM!");
-        return;
-    } 
+// loads rom
+// returns 0 if the loading of the file has failed
+// returns 1 if the file was loaded successfully
+u8 load_rom(const char *file_name) {
+  FILE *rom_file = fopen(file_name, "rb");
+  if (rom_file == NULL) {
+    perror("Error opening the ROM!");
+    return 0;
+  }
+  // go to end of the file and read the size
+  fseek(rom_file, 0, SEEK_END);
+  u32 file_size = ftell(rom_file);
+  // DEBUG
+  // printf("File size of `%s` is: %d\n", file_name, file_size);
 
+  // move file pointer to the beginning of the file
+  // so that you can copy from the start
+  fseek(rom_file, 0, SEEK_SET);
+  fread(memory + START_ADRESS, sizeof(u32),file_size, rom_file);
+  fclose(rom_file);
+  return 1;
 }
 
 int main(int argc, char *argv[]) {
+
+  load_rom(argv[1]);
+  return 0;
+
   const int window_width = 64 * CELL_SIZE;
   const int window_height = 32 * CELL_SIZE;
 
