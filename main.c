@@ -1,7 +1,8 @@
-#include "/include/raygui.h"
 #include "include/raylib.h"
-#include <stdio.h>
+#include <stdint.h>
 // Following the Tutorial https://austinmorlan.com/posts/chip8_emulator/
+
+#define SCREEN_CELL 10
 
 unsigned short opcode;      // opcodes each 2 bytes long
 unsigned char memory[4096]; // 4K RAM
@@ -16,15 +17,28 @@ unsigned short pc;          // program counter from 0x000 to 0xFFF
   */
 
 int main(int argc, char *argv[]) {
-    const int window_width = 800;
-    const int window_height = 450;
+    const int window_width = 64 * SCREEN_CELL;
+    const int window_height = 32 * SCREEN_CELL;
 
     InitWindow(window_width, window_height, "CHIP8 Emulator");
+    short test = 0;
+    Color col = GRAY;
     while (!WindowShouldClose()) {
         BeginDrawing();
         ClearBackground(RAYWHITE);
+        for (int i = 0; i < window_height; i++) {
+            test += 1;
+            for (int j = 0; j < window_width; j++) {
+               if(test % 2 == 0) {
+                    col = BLACK;
+                }else {
+                    col = GRAY;
+                }
+                DrawRectangle(j*SCREEN_CELL, i*SCREEN_CELL, SCREEN_CELL, SCREEN_CELL, col);
+                test++;
+            }
+        }
 
-        DrawText("CHIP8 is awesome!", window_width / 2, window_height / 2, 32, BLACK);
         EndDrawing();
     }
     return 0;
