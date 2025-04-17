@@ -4,8 +4,8 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 #include <string.h>
+#include <time.h>
 // Following the Tutorial https://austinmorlan.com/posts/chip8_emulator/
 
 /*******************************
@@ -38,19 +38,19 @@
 #define u32 uint32_t
 
 #define START_ADDRESS 0x200 // 0x200 needs 12 bits to be displayed 512 in base 10
-#define FONTSET_START_ADDRESS 0x50 
+#define FONTSET_START_ADDRESS 0x50
 #define FONTSET_SIZE 80
 
 #define SCREEN_WIDTH 64
 #define SCREEN_HEIGHT 32
 
 typedef struct Chip8 {
-  u8 V[16]; // general purpose registers rangig from V1 to VE
-  u8 memory[4096];  // 4K RAM
-  u16 index_reg;    // index register
-  u16 pc;           // program counter
-  u16 stack[16];    // stack for storing instructions
-  u8 sp;            // stack pointer
+  u8 V[16];        // general purpose registers rangig from V1 to VE
+  u8 memory[4096]; // 4K RAM
+  u16 I;           // index register
+  u16 pc;          // program counter
+  u16 stack[16];   // stack for storing instructions
+  u8 sp;           // stack pointer
   u8 delay_timer;
   u8 sound_timer;
   u8 keypad[16];
@@ -67,27 +67,27 @@ typedef struct Chip8 {
   10000000
 *************/
 // With 16 characters each 5 bytes big we need 16*5 = 80 bytes of storage for all characters
-u8 fontset[FONTSET_SIZE] = 
-  {
-    0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
-	0x20, 0x60, 0x20, 0x20, 0x70, // 1
-	0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
-	0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
-	0x90, 0x90, 0xF0, 0x10, 0x10, // 4
-	0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
-	0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
-	0xF0, 0x10, 0x20, 0x40, 0x40, // 7
-	0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
-	0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
-	0xF0, 0x90, 0xF0, 0x90, 0x90, // A
-	0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
-	0xF0, 0x80, 0x80, 0x80, 0xF0, // C
-	0xE0, 0x90, 0x90, 0x90, 0xE0, // D
-	0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
-	0xF0, 0x80, 0xF0, 0x80, 0x80  // F
-  };
+u8 fontset[FONTSET_SIZE] =
+    {
+        0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+        0x20, 0x60, 0x20, 0x20, 0x70, // 1
+        0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+        0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+        0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+        0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+        0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+        0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+        0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+        0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+        0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+        0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+        0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+        0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+        0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+        0xF0, 0x80, 0xF0, 0x80, 0x80  // F
+};
 
-void init_chip8(Chip8 *chip8){
+void init_chip8(Chip8 *chip8) {
   // init seed for random numbers
   srand(time(0));
   chip8->pc = START_ADDRESS;
@@ -119,13 +119,13 @@ int load_rom(Chip8 *chip8, const char *file_name) {
   return 0;
 }
 
-void load_font(Chip8* chip8, u8 fontset[]){
-  for(size_t i = 0; i < FONTSET_SIZE; i++){
+void load_font(Chip8 *chip8, u8 fontset[]) {
+  for (size_t i = 0; i < FONTSET_SIZE; i++) {
     chip8->memory[FONTSET_START_ADDRESS + i] = fontset[i];
   }
 }
 
-int random_byte(){
+int random_byte() {
   int num = rand() % 255 + 1;
   return num;
 }
@@ -135,37 +135,245 @@ all 34 instructions of the Chip8
 *********************************/
 
 // 00E0: Clear the display
-void op_00E0(Chip8 *chip8){
+void op_00E0(Chip8 *chip8) {
   for (size_t i = 0; i < SCREEN_HEIGHT; i++) {
-    for(size_t j = 0; j < SCREEN_WIDTH; j++){
+    for (size_t j = 0; j < SCREEN_WIDTH; j++) {
       chip8->video[j * i] = 0; // chip8 video buffer is 64 pixels wide and 32 tall
     }
   }
 }
 
 // 00EE: Return from a subroutine
-void op_00EE(Chip8 *chip8){
+void op_00EE(Chip8 *chip8) {
   chip8->sp--;
   chip8->pc = chip8->stack[chip8->sp];
 }
 
 // 1nnn: Jump to location nnn
-void op_1nnn(Chip8 *chip8){
+void op_1nnn(Chip8 *chip8) {
   u16 nnn = chip8->opcode & 0x0FFF; // only look at the lowest 3 bytes the first one is the instruction
   chip8->pc = nnn;
 }
 
-// 6XNN: Set Register Vx to NN
-void op_6XNN(Chip8 *chip8){
+// 2nnn: Call subroutine at nnn
+void op_2nnn(Chip8 *chip8) {
+  u16 nnn = chip8->opcode % 0x0FFF;
+  chip8->stack[chip8->sp] = nnn;
+  chip8->sp++;
+  chip8->pc = nnn;
+}
+
+// 3xkk: Skip next instruction if Vx = kk
+void op_3xkk(Chip8 *chip8) {
+  u8 x = (chip8->opcode & 0x0F00) >> 8;
+  u8 kk = chip8->opcode & 0x00FF;
+  if (chip8->V[x] == kk) {
+    chip8->pc += 2;
+  }
+}
+
+// 4xkk: Skip next instruction if Vx != kk
+void op_(Chip8 *chip8) {
+  u8 x = (chip8->opcode & 0x0F00) >> 8;
+  u8 kk = chip8->opcode & 0x00FF;
+  if (chip8->V[x] != kk) {
+    chip8->pc += 2;
+  }
+}
+
+// 5xy0: Skip next instruction if Vx = Vy
+void op_5xy0(Chip8 *chip8) {
+  u8 x = (chip8->opcode & 0x0F00) >> 8;
+  u8 y = (chip8->opcode & 0x00F0) >> 4;
+  if (chip8->V[x] == chip8->V[y]) {
+    chip8->pc += 2;
+  }
+}
+
+// 6xkk: Set Register Vx to
+void op_6XNN(Chip8 *chip8) {
   u8 x = (chip8->opcode & 0x0F00) >> 8; //  x = 0x0A00 >> 8 = 0x0A = 10 otherwise 0x0A00 = 2560
-  u8 nn = chip8->opcode & 0x00FF;
-  chip8->V[x] = nn;
+  u8 kk = chip8->opcode & 0x00FF;
+  chip8->V[x] = kk;
 }
 
-// 
-void op_(Chip8 *chip8){
+// 7xkk: Set Vx = Vx + kk
+void op_7xkk(Chip8 *chip8) {
+  u8 x = (chip8->opcode & 0x0F00) >> 8; //  x = 0x0A00 >> 8 = 0x0A = 10 otherwise 0x0A00 = 2560
+  u8 kk = chip8->opcode & 0x00FF;
+  chip8->V[x] = chip8->V[x] + kk;
+}
+
+// 8xy0: Set Vx = Vy
+void op_8xy0(Chip8 *chip8) {
+  u8 x = (chip8->opcode & 0x0F00) >> 8;
+  u8 y = (chip8->opcode & 0x00F0) >> 4;
+  chip8->V[x] = chip8->V[y];
+}
+
+// 8xy1: Set Vx = Vx OR Vy
+void op_8xy1(Chip8 *chip8) {
+
+  u8 x = (chip8->opcode & 0x0F00) >> 8;
+  u8 y = (chip8->opcode & 0x00F0) >> 4;
+  chip8->V[x] |= chip8->V[y];
+}
+
+// 8xy2: Set Vx = Vx AND Vy
+void op_8xy2(Chip8 *chip8) {
+
+  u8 x = (chip8->opcode & 0x0F00) >> 8;
+  u8 y = (chip8->opcode & 0x00F0) >> 4;
+  chip8->V[x] &= chip8->V[y];
+}
+
+// 8xy3: Set Vx = Vx XOR Vy
+void op_8xy3(Chip8 *chip8) {
+
+  u8 x = (chip8->opcode & 0x0F00) >> 8;
+  u8 y = (chip8->opcode & 0x00F0) >> 4;
+  chip8->V[x] ^= chip8->V[y];
+}
+
+// The values of Vx and Vy are added together. If the result is greater
+// than 8 bits (i.e., > 255,) VF is set to 1, otherwise 0. Only the lowest
+// 8 bits of the result are kept, and stored in Vx.
+// This is an ADD with an overflow flag. If the sum is greater than what can
+// fit into a byte (255), register VF will be set to 1 as a flag.
+// 8xy4: Set Vx = Vx + Vy, set VF = carry
+void op_8xy4(Chip8 *chip8) {
+  u8 x = (chip8->opcode & 0x0F00) >> 8;
+  u8 y = (chip8->opcode & 0x00F0) >> 4;
+
+  u8 sum = (chip8->V[x] + chip8->V[y]);
+
+  if (sum > 255) {
+    chip8->V[0xF] = 1;
+  } else {
+    chip8->V[0xF] = 0;
+  }
+
+  chip8->V[x] = sum & 0xFF;
+}
+
+// If Vx > Vy, then VF is set to 1, otherwise 0. Then Vy is subtracted from Vx,
+// and the results stored in Vx.
+// 8xy5: Set Vx = Vx - Vy, set VF = NOT borrow
+void op_8xy5(Chip8 *chip8) {
+  u8 x = (chip8->opcode & 0x0F00) >> 8;
+  u8 y = (chip8->opcode & 0x00F0) >> 4;
+
+  if (chip8->V[x] > chip8->V[y]) {
+    chip8->V[0xF] = 1;
+  } else {
+    chip8->V[0xF] = 0;
+  }
+  chip8->V[x] -= chip8->V[y];
+}
+
+// If the least-significant bit of Vx is 1, then VF is set to 1, otherwise 0.
+// Then Vx is divided by 2.
+// A right shift is performed (division by 2), and the least significant bit is saved in Register VF.
+// 8xy6: Set Vx = Vx SHR 1
+void op_8xy6(Chip8 *chip8) {
+  u8 x = (chip8->opcode & 0x0F00) >> 8;
+  bool ls_bit = chip8->V[x] & 0x0001;
+
+  if (ls_bit == 1) {
+    chip8->V[0xF] = 1;
+  } else {
+    chip8->V[0xF] = 0;
+  }
+
+  chip8->V[x] = chip8->V[x] >> 1;
+}
+
+// If Vy > Vx, then VF is set to 1, otherwise 0.
+// Then Vx is subtracted from Vy, and the results stored in Vx.
+// 8xy7 Set Vx = Vy - Vx, set VF = NOT borrow
+void op_8xy7(Chip8 *chip8) {
+  u8 x = (chip8->opcode & 0x0F00) >> 8;
+  u8 y = (chip8->opcode & 0x00F0) >> 4;
+
+  if (chip8->V[y] > chip8->V[x]) {
+    chip8->V[0xF] = 1;
+  } else {
+    chip8->V[0xF] = 0;
+  }
+
+  chip8->V[x] = (chip8->V[y] - chip8->V[x]);
+}
+
+// If the most-significant bit of Vx is 1, then VF is set to 1, otherwise to 0.
+// Then Vx is multiplied by 2.
+// A left shift is performed (multiplication by 2), and the most significant bit
+// is saved in Register VF.
+// 8xyE: Set Vx = Vx SHL 1.
+void op_8xyE(Chip8 *chip8) {
+  u8 x = (chip8->opcode & 0x0F00) >> 8;
+  bool ls_bit = chip8->V[x] & 0x0001;
+
+  if (ls_bit == 1) {
+    chip8->V[0xF] = 1;
+  } else {
+    chip8->V[0xF] = 0;
+  }
+
+  chip8->V[x] = chip8->V[x] << 1;
+}
+
+// 9xy0: Skip next instruction if Vx != Vy
+void op_9xy0(Chip8 *chip8) {
+  u8 x = (chip8->V[x] & 0x0F00) >> 8;
+  u8 y = (chip8->V[y] & 0x00F0) >> 4;
+  if (chip8->V[x] != chip8->V[y]) {
+    chip8->pc += 2;
+  }
+}
+
+// Annn: Set I = nnn
+void op_Annn(Chip8 *chip8) {
+  u16 nnn = chip8->opcode & 0x0FFF;
+  chip8->I = nnn;
+}
+
+// Bnnn: Jump to location nnn + V0
+void op_Bnnn(Chip8 *chip8) {
+  u16 nnn = chip8->opcode & 0x0FFF;
+  chip8->pc = (nnn + chip8->V[0]);
+}
+
+// Cxkk: Set Vx = random byte AND kk
+void op_Cxkk(Chip8 *chip8) {
+  u8 x = (chip8->V[x] & 0x0F00) >> 8;
+  u8 kk = (chip8->opcode & 0x00FF);
+  chip8->V[x] = (random_byte() & kk);
+}
+
+// set VF = collision
+// We iterate over the sprite, row by row and column by column. We know there 
+// are eight columns because a sprite is guaranteed to be eight pixels wide.
+
+// If a sprite pixel is on then there may be a collision with what’s already
+// being displayed, so we check if our screen pixel in the same location is set.
+// If so we must set the VF register to express collision.
+
+// Then we can just XOR the screen pixel with 0xFFFFFFFF to essentially XOR it
+// with the sprite pixel (which we now know is on). We can’t XOR directly because
+// the sprite pixel is either 1 or 0 while our video pixel is either 0x00000000 or 0xFFFFFFFF.
+// Dxyn: Dsiplay n-byte sprite starting at memory location I at (Vx, Vy), 
+void op_Dxyn(Chip8 *chip8) {
 
 }
+
+//
+void op_(Chip8 *chip8) {
+}
+
+//
+void op_(Chip8 *chip8) {
+}
+
 int main(int argc, char **argv) {
 
   Chip8 chip8 = {0};
@@ -173,7 +381,7 @@ int main(int argc, char **argv) {
 
   load_rom(&chip8, argv[1]);
   for (size_t i = 0; i < 10; i++) {
-  printf("random number: %d\n", random_byte());
+    printf("random number: %d\n", random_byte());
   }
   return 0;
 
