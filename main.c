@@ -350,8 +350,7 @@ void op_Cxkk(Chip8 *chip8) {
   chip8->V[x] = (random_byte() & kk);
 }
 
-// set VF = collision
-// We iterate over the sprite, row by row and column by column. We know there 
+// We iterate over the sprite, row by row and column by column. We know there
 // are eight columns because a sprite is guaranteed to be eight pixels wide.
 
 // If a sprite pixel is on then there may be a collision with what’s already
@@ -361,7 +360,7 @@ void op_Cxkk(Chip8 *chip8) {
 // Then we can just XOR the screen pixel with 0xFFFFFFFF to essentially XOR it
 // with the sprite pixel (which we now know is on). We can’t XOR directly because
 // the sprite pixel is either 1 or 0 while our video pixel is either 0x00000000 or 0xFFFFFFFF.
-// Dxyn: Dsiplay n-byte sprite starting at memory location I at (Vx, Vy), 
+// Dxyn: Dsiplay n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision
 void op_Dxyn(Chip8 *chip8) {
 
 }
