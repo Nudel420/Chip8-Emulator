@@ -43,6 +43,7 @@
 
 #define SCREEN_WIDTH 64
 #define SCREEN_HEIGHT 32
+#define KEYPAD_MAX 16
 
 typedef struct Chip8 {
   u8 V[16];        // general purpose registers rangig from V1 to VE
@@ -53,7 +54,7 @@ typedef struct Chip8 {
   u8 sp;           // stack pointer
   u8 delay_timer;
   u8 sound_timer;
-  u8 keypad[16];
+  u8 keypad[KEYPAD_MAX];
   u32 video[64 * 32]; // video display array
   u16 opcode;         // opcodes each 2 bytes long
 } Chip8;
@@ -360,9 +361,83 @@ void op_Cxkk(Chip8 *chip8) {
 // Then we can just XOR the screen pixel with 0xFFFFFFFF to essentially XOR it
 // with the sprite pixel (which we now know is on). We can’t XOR directly because
 // the sprite pixel is either 1 or 0 while our video pixel is either 0x00000000 or 0xFFFFFFFF.
-// Dxyn: Dsiplay n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision
+// Dxyn: Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision
 void op_Dxyn(Chip8 *chip8) {
+  u8 x = (chip8->opcode & 0x0F00) >> 8;
+  u8 y = (chip8->opcode & 0x00F0) >> 4;
+  u8 n = (chip8->opcode & 0x000F);
 
+  u8 x_coord = chip8->V[x] % SCREEN_WIDTH;  // SCREEN_WIDTH is 64
+  u8 y_coord = chip8->V[y] % SCREEN_HEIGHT; // SCREEN_HEIGHT is 32
+
+  chip8->V[0xF] = 0;
+
+  for (u8 row = 0; row < n; row++) {
+    u8 sprite_byte = chip8->memory[chip8->I + row];
+    for (u8 col = 0; col < 8; col++) {
+      u8 sprite_pixel = sprite_byte & (0x80 >> col);
+      u32 *screen_pixel = &chip8->video[((y_coord + row) * SCREEN_WIDTH) + (x_coord + col)];
+
+      // check if sprite pixel is 1
+      if (sprite_pixel == 1) {
+        // check if screen_pixel is already on (set to 1)
+        if (*screen_pixel == 0xFFFFFFFF) {
+          chip8->V[0xF] = 1;
+        }
+
+        // XOR with sceen_pixel with sprite_pixel
+        // (NOTE): it is not directly XORed because of
+        // the difference in magnitude of both values
+        *screen_pixel ^= 0xFFFFFFFF;
+      }
+    }
+  }
+}
+
+// Ex9E: Skip next instruction if key with value of Vx is pressed
+void op_Ex9E(Chip8 *chip8) {
+  u8 x = (chip8->opcode & 0x0F00) >> 8;
+  u8 value = chip8->V[x];
+
+  if (chip8->keypad[value]) {
+    chip8->pc += 2;
+  }
+}
+
+// ExA1: Skip next instruction if key with the value of Vx is not pressed
+void op_ExA1(Chip8 *chip8) {
+  u8 x = (chip8->opcode & 0x0F00) >> 8;
+  u8 value = chip8->V[x];
+
+  if (!(chip8->keypad[value])) {
+    chip8->pc += 2;
+  }
+}
+
+// Fx07: Set Vx = delay timer value
+void op_Fx07(Chip8 *chip8) {
+  u8 x = (chip8->opcode & 0x0F00) >> 8;
+  chip8->V[x] = chip8->delay_timer;
+}
+
+// Fx0A: Wait for a key press, store the value of the key in Vx
+// FIXME: this function was implemented with a bunch of if statements 
+// but i wrapped them into a for loop
+void op_Fx0A(Chip8 *chip8) {
+  u8 x = (chip8->opcode & 0x0F00) >> 8;
+  for (u8 i = 0; i < KEYPAD_MAX; i++) {
+    if (chip8->keypad[i]) {
+      chip8->V[x] = i;
+      return;
+    }
+  }
+  chip8->pc -= 2;
+}
+
+// Fx15: Set delay timer = Vx
+void op_Fx15(Chip8 *chip8) {
+  u8 x = (chip8->opcode & 0x0F00) >> 8;
+  chip8->delay_timer = chip8->V[x];
 }
 
 //
