@@ -440,6 +440,50 @@ void op_Fx15(Chip8 *chip8) {
   chip8->delay_timer = chip8->V[x];
 }
 
+// Fx18: Set sound timer = Vx
+void op_Fx18(Chip8 *chip8) {
+  u8 x = (chip8->opcode & 0x0F00) >> 8;
+  chip8->sound_timer = chip8->V[x];
+}
+
+// Fx1E: Set I = I + Vx
+void op_Fx1E(Chip8 *chip8) {
+  u8 x = (chip8->opcode & 0x0F00) >> 8;
+  chip8->I = chip8->I + chip8->V[x];
+}
+
+// Fx29: Set I = location of sprite for digit Vx
+// Font characters are located at 0x50, each being five bytes long
+void op_Fx29(Chip8 *chip8) {
+  u8 x = (chip8->opcode & 0x0F00) >> 8;
+  chip8->I = FONTSET_START_ADDRESS + (chip8->V[x] * 5);
+}
+
+// The interpreter takes the decimal value of Vx,
+// and places the hundreds digit in memory at location in I,
+// the tens digit at location I+1
+// and the ones digit at location I+2
+// Fx33: Store BCD representation of Vx in memory locations I, I+1, I+2
+void op_Fx33(Chip8 *chip8) {
+  
+}
+
+//
+void op_(Chip8 *chip8) {
+}
+
+//
+void op_(Chip8 *chip8) {
+}
+
+//
+void op_(Chip8 *chip8) {
+}
+
+//
+void op_(Chip8 *chip8) {
+}
+
 //
 void op_(Chip8 *chip8) {
 }
