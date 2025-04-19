@@ -421,7 +421,7 @@ void op_Fx07(Chip8 *chip8) {
 }
 
 // Fx0A: Wait for a key press, store the value of the key in Vx
-// FIXME: this function was implemented with a bunch of if statements 
+// FIXME: this function was implemented with a bunch of if statements
 // but i wrapped them into a for loop
 void op_Fx0A(Chip8 *chip8) {
   u8 x = (chip8->opcode & 0x0F00) >> 8;
@@ -465,43 +465,40 @@ void op_Fx29(Chip8 *chip8) {
 // and the ones digit at location I+2
 // Fx33: Store BCD representation of Vx in memory locations I, I+1, I+2
 void op_Fx33(Chip8 *chip8) {
-  
+  u8 x = (chip8->opcode & 0x0F00) >> 8;
+  u8 digit = chip8->V[x];
+
+  u8 digit_one = digit % 10;
+  digit /= 10;
+  u8 digit_ten = digit % 10;
+  digit /= 10;
+  u8 digit_hundred = digit % 10;
+
+  chip8->memory[chip8->I] = digit_hundred;
+  chip8->memory[chip8->I + 1] = digit_ten;
+  chip8->memory[chip8->I + 2] = digit_one;
 }
 
-//
-void op_(Chip8 *chip8) {
+// Fx55: Store registers V0 through Vx in memory starting at location I
+void op_Fx55(Chip8 *chip8) {
+  u8 x = (chip8->opcode & 0x0F00) >> 8;
+  for (u8 i = 0; i <= x; ++i) {
+    chip8->memory[chip8->I + i] = chip8->V[i];
+  }
 }
 
-//
-void op_(Chip8 *chip8) {
-}
-
-//
-void op_(Chip8 *chip8) {
-}
-
-//
-void op_(Chip8 *chip8) {
-}
-
-//
-void op_(Chip8 *chip8) {
-}
-
-//
-void op_(Chip8 *chip8) {
+// Fx65: Read registers V0 through Vx from meory starting at location I
+void op_Fx65(Chip8 *chip8) {
+  u8 x = (chip8->opcode & 0x0F00) >> 8;
+  for (u8 i = 0; i <= x; ++i) {
+    chip8->V[i] = chip8->memory[chip8->I + i];
+  }
 }
 
 int main(int argc, char **argv) {
 
   Chip8 chip8 = {0};
   init_chip8(&chip8);
-
-  load_rom(&chip8, argv[1]);
-  for (size_t i = 0; i < 10; i++) {
-    printf("random number: %d\n", random_byte());
-  }
-  return 0;
 
   const int window_width = 64 * CELL_SIZE;
   const int window_height = 32 * CELL_SIZE;
