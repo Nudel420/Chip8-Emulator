@@ -495,6 +495,25 @@ void op_Fx65(Chip8 *chip8) {
   }
 }
 
+// Fetch, Decode and Exectue instruction
+// inspired by: https://github.com/jborza/emuchip8/blob/master/cpu.c
+void process_instruction(Chip8 *chip8){
+
+  // Fetch
+  // Catch first byte and second byte separatly because memory is u8
+  // but an instruction consists of 2 bytes
+  u16 opcode = (chip8->memory[chip8->pc] << 8) & (chip8->memory[chip8->pc + 1]);
+  chip8->pc += 2;
+
+  // Decode
+  switch(opcode){
+
+    default: {
+      printf("unknown opcode [0x0000]: %X\n", opcode);
+    }
+  }
+}
+
 int main(int argc, char **argv) {
 
   Chip8 chip8 = {0};
