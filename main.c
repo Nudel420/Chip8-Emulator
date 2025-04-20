@@ -1,5 +1,5 @@
 #define _CRT_SECURE_NO_WARNINGS
-#include "/include/raylib.h"
+#include "include/raylib.h"
 #include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -15,21 +15,6 @@
     0x050-0x0A0 -> Used for the built in 4x5 pixel font set (0-F)
     0x200-0xFFF -> Program ROM and free RAM
  ********************************/
-
-/*********************************
-    16 key-layout on normal keyboard
-
-    Keypad       Keyboard
-    +-+-+-+-+    +-+-+-+-+
-    |1|2|3|C|    |1|2|3|4|
-    +-+-+-+-+    +-+-+-+-+
-    |4|5|6|D|    |Q|W|E|R|
-    +-+-+-+-+ => +-+-+-+-+
-    |7|8|9|E|    |A|S|D|F|
-    +-+-+-+-+    +-+-+-+-+
-    |A|0|B|F|    |Y|X|C|V|
-    +-+-+-+-+    +-+-+-+-+
- *********************************/
 
 #define CELL_SIZE 10
 
@@ -88,11 +73,6 @@ u8 fontset[FONTSET_SIZE] =
         0xF0, 0x80, 0xF0, 0x80, 0x80  // F
 };
 
-void init_chip8(Chip8 *chip8) {
-  // init seed for random numbers
-  srand(time(0));
-  chip8->pc = START_ADDRESS;
-}
 
 // loads rom
 // returns 0 if the loading of the file has failed
@@ -131,6 +111,12 @@ int random_byte() {
   return num;
 }
 
+void init_chip8(Chip8 *chip8) {
+  // init seed for random numbers
+  srand(time(0));
+  chip8->pc = START_ADDRESS;
+  load_font(chip8, fontset);
+}
 /*********************************
 all 34 instructions of the Chip8
 *********************************/
@@ -174,7 +160,7 @@ void op_3xkk(Chip8 *chip8) {
 }
 
 // 4xkk: Skip next instruction if Vx != kk
-void op_(Chip8 *chip8) {
+void op_4xkk(Chip8 *chip8) {
   u8 x = (chip8->opcode & 0x0F00) >> 8;
   u8 kk = chip8->opcode & 0x00FF;
   if (chip8->V[x] != kk) {
@@ -214,7 +200,6 @@ void op_8xy0(Chip8 *chip8) {
 
 // 8xy1: Set Vx = Vx OR Vy
 void op_8xy1(Chip8 *chip8) {
-
   u8 x = (chip8->opcode & 0x0F00) >> 8;
   u8 y = (chip8->opcode & 0x00F0) >> 4;
   chip8->V[x] |= chip8->V[y];
@@ -222,7 +207,6 @@ void op_8xy1(Chip8 *chip8) {
 
 // 8xy2: Set Vx = Vx AND Vy
 void op_8xy2(Chip8 *chip8) {
-
   u8 x = (chip8->opcode & 0x0F00) >> 8;
   u8 y = (chip8->opcode & 0x00F0) >> 4;
   chip8->V[x] &= chip8->V[y];
@@ -230,7 +214,6 @@ void op_8xy2(Chip8 *chip8) {
 
 // 8xy3: Set Vx = Vx XOR Vy
 void op_8xy3(Chip8 *chip8) {
-
   u8 x = (chip8->opcode & 0x0F00) >> 8;
   u8 y = (chip8->opcode & 0x00F0) >> 4;
   chip8->V[x] ^= chip8->V[y];
@@ -497,20 +480,171 @@ void op_Fx65(Chip8 *chip8) {
 
 // Fetch, Decode and Exectue instruction
 // inspired by: https://github.com/jborza/emuchip8/blob/master/cpu.c
-void process_instruction(Chip8 *chip8){
+void process_instruction(Chip8 *chip8) {
 
   // Fetch
   // Catch first byte and second byte separatly because memory is u8
   // but an instruction consists of 2 bytes
-  u16 opcode = (chip8->memory[chip8->pc] << 8) & (chip8->memory[chip8->pc + 1]);
+  chip8->opcode = (chip8->memory[chip8->pc] << 8) & (chip8->memory[chip8->pc + 1]);
   chip8->pc += 2;
 
   // Decode
-  switch(opcode){
 
-    default: {
-      printf("unknown opcode [0x0000]: %X\n", opcode);
+  // an opcode consists of 4 bytes with the following encoding
+  // examples: [0xVxy0], [0xVnnn], [0xV00n], etc.
+  u8 x = (chip8->opcode & 0x0F00) >> 8;
+  u8 y = (chip8->opcode & 0x00F0) >> 4;
+  // u16 nnn = (chip8->opcode & 0x0FFF);
+  // u8 nn = (chip8->opcode & 0x00FF);
+  // u8 n = (chip8->opcode & 0x000F);
+
+  // switch to distinguish between the first bit ranging
+  // from 0 - F (16)
+  switch (chip8->opcode & 0xF000) {
+  case (0x0000): {
+    // lookup the last two bytes
+    switch (chip8->opcode & 0x00FF) {
+    case 0x00E0:
+      op_00E0(chip8);
+      break;
+    case 0x00EE:
+      op_00EE(chip8);
+      break;
     }
+    break;
+  }
+  case (0x1000): {
+      printf("it works\n");
+    op_1nnn(chip8);
+    break;
+  }
+  case (0x6000): {
+    op_6XNN(chip8);
+    break;
+  }
+  case (0x7000): {
+    op_7xkk(chip8);
+    break;
+  }
+  case (0xA000): {
+    op_Annn(chip8);
+    break;
+  }
+  case (0xD000): {
+    op_Dxyn(chip8);
+    break;
+  }
+  default: {
+    printf("unknown opcode [0x0000]: 0x%X\n", chip8->opcode);
+  }
+  }
+
+  // decrement timers if they have been set
+  if (chip8->delay_timer > 0) {
+    chip8->delay_timer--;
+  }
+  if (chip8->sound_timer > 0) {
+    chip8->sound_timer--;
+  }
+  printf("process function\n");
+}
+
+/*********************************
+    16 key-layout on normal keyboard
+
+    Keypad       Keyboard
+    +-+-+-+-+    +-+-+-+-+
+    |1|2|3|C|    |1|2|3|4|
+    +-+-+-+-+    +-+-+-+-+
+    |4|5|6|D|    |Q|W|E|R|
+    +-+-+-+-+ => +-+-+-+-+
+    |7|8|9|E|    |A|S|D|F|
+    +-+-+-+-+    +-+-+-+-+
+    |A|0|B|F|    |Y|X|C|V|
+    +-+-+-+-+    +-+-+-+-+
+ *********************************/
+
+void update_input_keys(u8 keypad[]) {
+  if (IsKeyDown(KEY_ONE)) {
+    keypad[0x0] = 1;
+  } else if (IsKeyUp(KEY_ONE)) {
+    keypad[0x0] = 0;
+  }
+  if (IsKeyDown(KEY_TWO)) {
+    keypad[0x1] = 1;
+  } else if (IsKeyUp(KEY_TWO)) {
+    keypad[0x1] = 0;
+  }
+  if (IsKeyDown(KEY_THREE)) {
+    keypad[0x2] = 1;
+  } else if (IsKeyUp(KEY_THREE)) {
+    keypad[0x2] = 0;
+  }
+  if (IsKeyDown(KEY_FOUR)) {
+    keypad[0x3] = 1;
+    printf("key 4 down\n");
+  } else if (IsKeyUp(KEY_FOUR)) {
+    keypad[0x3] = 0;
+  }
+  if (IsKeyDown(KEY_Q)) {
+    keypad[0x4] = 1;
+  } else if (IsKeyUp(KEY_Q)) {
+    keypad[0x4] = 0;
+  }
+  if (IsKeyDown(KEY_W)) {
+    keypad[0x5] = 1;
+  } else if (IsKeyUp(KEY_W)) {
+    keypad[0x5] = 0;
+  }
+  if (IsKeyDown(KEY_E)) {
+    keypad[0x6] = 1;
+  } else if (IsKeyUp(KEY_E)) {
+    keypad[0x6] = 0;
+  }
+  if (IsKeyDown(KEY_R)) {
+    keypad[0x7] = 1;
+  } else if (IsKeyUp(KEY_R)) {
+    keypad[0x7] = 0;
+  }
+  if (IsKeyDown(KEY_A)) {
+    keypad[0x8] = 1;
+  } else if (IsKeyUp(KEY_A)) {
+    keypad[0x8] = 0;
+  }
+  if (IsKeyDown(KEY_S)) {
+    keypad[0x9] = 1;
+  } else if (IsKeyUp(KEY_S)) {
+    keypad[0x9] = 0;
+  }
+  if (IsKeyDown(KEY_D)) {
+    keypad[0xA] = 1;
+  } else if (IsKeyUp(KEY_D)) {
+    keypad[0xA] = 0;
+  }
+  if (IsKeyDown(KEY_F)) {
+    keypad[0xB] = 1;
+  } else if (IsKeyUp(KEY_F)) {
+    keypad[0xB] = 0;
+  }
+  if (IsKeyDown(KEY_Y)) {
+    keypad[0xC] = 1;
+  } else if (IsKeyUp(KEY_Y)) {
+    keypad[0xC] = 0;
+  }
+  if (IsKeyDown(KEY_X)) {
+    keypad[0xD] = 1;
+  } else if (IsKeyUp(KEY_X)) {
+    keypad[0xD] = 0;
+  }
+  if (IsKeyDown(KEY_C)) {
+    keypad[0xE] = 1;
+  } else if (IsKeyUp(KEY_C)) {
+    keypad[0xE] = 0;
+  }
+  if (IsKeyDown(KEY_V)) {
+    keypad[0xF] = 1;
+  } else if (IsKeyUp(KEY_V)) {
+    keypad[0xF] = 0;
   }
 }
 
@@ -518,28 +652,27 @@ int main(int argc, char **argv) {
 
   Chip8 chip8 = {0};
   init_chip8(&chip8);
+  load_rom(&chip8, "IBM.ch8");
 
-  const int window_width = 64 * CELL_SIZE;
-  const int window_height = 32 * CELL_SIZE;
+  const int window_width = 64;
+  const int window_height = 32;
 
-  Color col = WHITE;
-  short col_switch = 0;
-  InitWindow(window_width, window_height, "CHIP8 Emulator");
+  InitWindow(window_width * CELL_SIZE, window_height * CELL_SIZE, "CHIP8 Emulator");
+  SetTargetFPS(60);
   while (!WindowShouldClose()) {
+    update_input_keys(chip8.keypad);
+    process_instruction(&chip8);
+
     BeginDrawing();
     ClearBackground(RAYWHITE);
     for (int i = 0; i < window_height; i++) {
-      col_switch += 1;
       for (int j = 0; j < window_width; j++) {
-        if (col_switch % 2 == 0) {
-          col = GRAY;
-        } else {
-          col = WHITE;
+        if (chip8.video[i * j]) {
+          DrawRectangle(j * CELL_SIZE, i * CELL_SIZE, CELL_SIZE, CELL_SIZE, BLACK);
         }
-        DrawRectangle(j * CELL_SIZE, i * CELL_SIZE, CELL_SIZE, CELL_SIZE, col);
-        col_switch++;
       }
     }
+    // DrawText(TextFormat("Keypad 4: %X\n", chip8.keypad[3]), 10, 10, 20, RED);
     EndDrawing();
   }
   return 0;
