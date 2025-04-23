@@ -40,8 +40,8 @@ typedef struct Chip8 {
   u8 delay_timer;
   u8 sound_timer;
   u8 keypad[KEYPAD_MAX];
-  u32 video[64 * 32]; // video display array
-  u16 opcode;         // opcodes each 2 bytes long
+  u32 video[SCREEN_HEIGHT][SCREEN_WIDTH]; // video display array 32 high and 64 wide
+  u16 opcode;                             // opcodes each 2 bytes long
 } Chip8;
 
 // Font each character consists of 5 bytes, example of letter "F":
@@ -72,7 +72,6 @@ u8 fontset[FONTSET_SIZE] =
         0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
         0xF0, 0x80, 0xF0, 0x80, 0x80  // F
 };
-
 
 // loads rom
 // returns 0 if the loading of the file has failed
@@ -123,11 +122,7 @@ all 34 instructions of the Chip8
 
 // 00E0: Clear the display
 void op_00E0(Chip8 *chip8) {
-  for (size_t i = 0; i < SCREEN_HEIGHT; i++) {
-    for (size_t j = 0; j < SCREEN_WIDTH; j++) {
-      chip8->video[j * i] = 0; // chip8 video buffer is 64 pixels wide and 32 tall
-    }
-  }
+  memset(chip8->video, 0, sizeof(chip8->video));
 }
 
 // 00EE: Return from a subroutine
@@ -177,8 +172,8 @@ void op_5xy0(Chip8 *chip8) {
   }
 }
 
-// 6xkk: Set Register Vx to
-void op_6XNN(Chip8 *chip8) {
+// 6xkk: Set Register Vx = kk
+void op_6xkk(Chip8 *chip8) {
   u8 x = (chip8->opcode & 0x0F00) >> 8; //  x = 0x0A00 >> 8 = 0x0A = 10 otherwise 0x0A00 = 2560
   u8 kk = chip8->opcode & 0x00FF;
   chip8->V[x] = kk;
@@ -357,12 +352,13 @@ void op_Dxyn(Chip8 *chip8) {
 
   for (u8 row = 0; row < n; row++) {
     u8 sprite_byte = chip8->memory[chip8->I + row];
+
     for (u8 col = 0; col < 8; col++) {
       u8 sprite_pixel = sprite_byte & (0x80 >> col);
-      u32 *screen_pixel = &chip8->video[((y_coord + row) * SCREEN_WIDTH) + (x_coord + col)];
+      // u32 *screen_pixel = &chip8->video[((y_coord + row) * SCREEN_WIDTH) + (x_coord + col)];
+      u32 *screen_pixel = &chip8->video[y_coord + row][x_coord + col];
 
-      // check if sprite pixel is 1
-      if (sprite_pixel == 1) {
+      if (sprite_pixel) {
         // check if screen_pixel is already on (set to 1)
         if (*screen_pixel == 0xFFFFFFFF) {
           chip8->V[0xF] = 1;
@@ -482,13 +478,16 @@ void op_Fx65(Chip8 *chip8) {
 // inspired by: https://github.com/jborza/emuchip8/blob/master/cpu.c
 void process_instruction(Chip8 *chip8) {
 
-  // Fetch
+  /* Fetch */
+  
   // Catch first byte and second byte separatly because memory is u8
   // but an instruction consists of 2 bytes
-  chip8->opcode = (chip8->memory[chip8->pc] << 8) & (chip8->memory[chip8->pc + 1]);
+  chip8->opcode = (chip8->memory[chip8->pc]);
+  chip8->opcode <<= 8;
+  chip8->opcode |= (chip8->memory[chip8->pc + 1]);
   chip8->pc += 2;
 
-  // Decode
+  /* Decode & Execute */
 
   // an opcode consists of 4 bytes with the following encoding
   // examples: [0xVxy0], [0xVnnn], [0xV00n], etc.
@@ -514,12 +513,11 @@ void process_instruction(Chip8 *chip8) {
     break;
   }
   case (0x1000): {
-      printf("it works\n");
     op_1nnn(chip8);
     break;
   }
   case (0x6000): {
-    op_6XNN(chip8);
+    op_6xkk(chip8);
     break;
   }
   case (0x7000): {
@@ -546,7 +544,6 @@ void process_instruction(Chip8 *chip8) {
   if (chip8->sound_timer > 0) {
     chip8->sound_timer--;
   }
-  printf("process function\n");
 }
 
 /*********************************
@@ -582,7 +579,6 @@ void update_input_keys(u8 keypad[]) {
   }
   if (IsKeyDown(KEY_FOUR)) {
     keypad[0x3] = 1;
-    printf("key 4 down\n");
   } else if (IsKeyUp(KEY_FOUR)) {
     keypad[0x3] = 0;
   }
@@ -654,20 +650,17 @@ int main(int argc, char **argv) {
   init_chip8(&chip8);
   load_rom(&chip8, "IBM.ch8");
 
-  const int window_width = 64;
-  const int window_height = 32;
-
-  InitWindow(window_width * CELL_SIZE, window_height * CELL_SIZE, "CHIP8 Emulator");
+  InitWindow(SCREEN_WIDTH * CELL_SIZE, SCREEN_HEIGHT * CELL_SIZE, "CHIP8 Emulator");
   SetTargetFPS(60);
   while (!WindowShouldClose()) {
     update_input_keys(chip8.keypad);
     process_instruction(&chip8);
 
     BeginDrawing();
-    ClearBackground(RAYWHITE);
-    for (int i = 0; i < window_height; i++) {
-      for (int j = 0; j < window_width; j++) {
-        if (chip8.video[i * j]) {
+    ClearBackground(LIGHTGRAY);
+    for (int i = 0; i < SCREEN_HEIGHT; i++) {
+      for (int j = 0; j < SCREEN_WIDTH; j++) {
+        if (chip8.video[i][j]) {
           DrawRectangle(j * CELL_SIZE, i * CELL_SIZE, CELL_SIZE, CELL_SIZE, BLACK);
         }
       }
