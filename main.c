@@ -516,6 +516,22 @@ void process_instruction(Chip8 *chip8) {
     op_1nnn(chip8);
     break;
   }
+  case (0x2000): {
+    op_2nnn(chip8);
+    break;
+  }
+  case (0x3000): {
+    op_3xkk(chip8);
+    break;
+  }
+  case (0x4000): {
+    op_4xkk(chip8);
+    break;
+  }
+  case (0x5000): {
+    op_5xy0(chip8);
+    break;
+  }
   case (0x6000): {
     op_6xkk(chip8);
     break;
@@ -524,12 +540,119 @@ void process_instruction(Chip8 *chip8) {
     op_7xkk(chip8);
     break;
   }
+  case (0x8000): {
+      switch(chip8->opcode & 0x000F){
+        case (0x0000): {
+          op_8xy0(chip8);
+          break;
+        }
+        case (0x0001): {
+          op_8xy1(chip8);
+          break;
+        }
+        case (0x0002): {
+          op_8xy2(chip8);
+          break;
+        }
+        case (0x0003): {
+          op_8xy3(chip8);
+          break;
+        }
+        case (0x0004): {
+          op_8xy4(chip8);
+          break;
+        }
+        case (0x0005): {
+          op_8xy5(chip8);
+          break;
+        }
+        case (0x0006): {
+          op_8xy6(chip8);
+          break;
+        }
+        case (0x0007): {
+          op_8xy7(chip8);
+          break;
+        }
+        case (0x000E): {
+          op_8xyE(chip8);
+          break;
+        }
+      }
+    break;
+  }
+  case (0x9000): {
+    op_9xy0(chip8);
+    break;
+  }
   case (0xA000): {
     op_Annn(chip8);
     break;
   }
+  case (0xB000): {
+    op_Bnnn(chip8);
+    break;
+  }
+  case (0xC000): {
+    op_Cxkk(chip8);
+    break;
+  }
   case (0xD000): {
     op_Dxyn(chip8);
+    break;
+  }
+  case (0xE000): {
+      switch(chip8->opcode & 0x00FF){
+        case (0x009E): {
+          op_Ex9E(chip8);
+          break;
+        }
+        case (0x00A1): {
+          op_ExA1(chip8);
+          break;
+        }
+      }
+    break;
+  }
+  case (0xF000): {
+      switch(chip8->opcode & 0x00FF){
+        case (0x0007): {
+          op_Fx07(chip8);
+          break;
+        }
+        case (0x000A): {
+          op_Fx0A(chip8);
+          break;
+        }
+        case (0x0015): {
+          op_Fx15(chip8);
+          break;
+        }
+        case (0x0018): {
+          op_Fx18(chip8);
+          break;
+        }
+        case (0x001E): {
+          op_Fx1E(chip8);
+          break;
+        }
+        case (0x0029): {
+          op_Fx29(chip8);
+          break;
+        }
+        case (0x0033): {
+          op_Fx33(chip8);
+          break;
+        }
+        case (0x0055): {
+          op_Fx55(chip8);
+          break;
+        }
+        case (0x0065): {
+          op_Fx65(chip8);
+          break;
+        }
+      }
     break;
   }
   default: {
@@ -648,7 +771,8 @@ int main(int argc, char **argv) {
 
   Chip8 chip8 = {0};
   init_chip8(&chip8);
-  load_rom(&chip8, "IBM.ch8");
+  //load_rom(&chip8, "IBM.ch8");
+  load_rom(&chip8, "fulltest.ch8");
 
   InitWindow(SCREEN_WIDTH * CELL_SIZE, SCREEN_HEIGHT * CELL_SIZE, "CHIP8 Emulator");
   SetTargetFPS(60);
