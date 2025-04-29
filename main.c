@@ -139,8 +139,8 @@ void op_1nnn(Chip8 *chip8) {
 
 // 2nnn: Call subroutine at nnn
 void op_2nnn(Chip8 *chip8) {
-  u16 nnn = chip8->opcode % 0x0FFF;
-  chip8->stack[chip8->sp] = nnn;
+  u16 nnn = chip8->opcode & 0x0FFF;
+  chip8->stack[chip8->sp] = chip8->pc;
   chip8->sp++;
   chip8->pc = nnn;
 }
@@ -224,7 +224,7 @@ void op_8xy4(Chip8 *chip8) {
   u8 x = (chip8->opcode & 0x0F00) >> 8;
   u8 y = (chip8->opcode & 0x00F0) >> 4;
 
-  u8 sum = (chip8->V[x] + chip8->V[y]);
+  u16 sum = (chip8->V[x] + chip8->V[y]);
 
   if (sum > 255) {
     chip8->V[0xF] = 1;
@@ -256,15 +256,10 @@ void op_8xy5(Chip8 *chip8) {
 // 8xy6: Set Vx = Vx SHR 1
 void op_8xy6(Chip8 *chip8) {
   u8 x = (chip8->opcode & 0x0F00) >> 8;
-  bool ls_bit = chip8->V[x] & 0x0001;
 
-  if (ls_bit == 1) {
-    chip8->V[0xF] = 1;
-  } else {
-    chip8->V[0xF] = 0;
-  }
+  chip8->V[0xF] = (chip8->V[x] & 0x0001);
 
-  chip8->V[x] = chip8->V[x] >> 1;
+  chip8->V[x] >>= 1;
 }
 
 // If Vy > Vx, then VF is set to 1, otherwise 0.
@@ -290,21 +285,15 @@ void op_8xy7(Chip8 *chip8) {
 // 8xyE: Set Vx = Vx SHL 1.
 void op_8xyE(Chip8 *chip8) {
   u8 x = (chip8->opcode & 0x0F00) >> 8;
-  bool ls_bit = chip8->V[x] & 0x0001;
 
-  if (ls_bit == 1) {
-    chip8->V[0xF] = 1;
-  } else {
-    chip8->V[0xF] = 0;
-  }
-
-  chip8->V[x] = chip8->V[x] << 1;
+  chip8->V[0xF] = (chip8->V[x] & 0x80) >> 7;
+  chip8->V[x] <<= 1;
 }
 
 // 9xy0: Skip next instruction if Vx != Vy
 void op_9xy0(Chip8 *chip8) {
-  u8 x = (chip8->V[x] & 0x0F00) >> 8;
-  u8 y = (chip8->V[y] & 0x00F0) >> 4;
+  u8 x = (chip8->opcode & 0x0F00) >> 8;
+  u8 y = (chip8->opcode & 0x00F0) >> 4;
   if (chip8->V[x] != chip8->V[y]) {
     chip8->pc += 2;
   }
@@ -324,7 +313,7 @@ void op_Bnnn(Chip8 *chip8) {
 
 // Cxkk: Set Vx = random byte AND kk
 void op_Cxkk(Chip8 *chip8) {
-  u8 x = (chip8->V[x] & 0x0F00) >> 8;
+  u8 x = (chip8->opcode & 0x0F00) >> 8;
   u8 kk = (chip8->opcode & 0x00FF);
   chip8->V[x] = (random_byte() & kk);
 }
@@ -400,17 +389,14 @@ void op_Fx07(Chip8 *chip8) {
 }
 
 // Fx0A: Wait for a key press, store the value of the key in Vx
-// FIXME: this function was implemented with a bunch of if statements
-// but i wrapped them into a for loop
 void op_Fx0A(Chip8 *chip8) {
   u8 x = (chip8->opcode & 0x0F00) >> 8;
-  for (u8 i = 0; i < KEYPAD_MAX; i++) {
-    if (chip8->keypad[i]) {
-      chip8->V[x] = i;
-      return;
-    }
+  // TODO: add all remaining keypad
+  if (chip8->keypad[0]){
+    chip8->V[0] = 0;
+  } else if (chip8->keypad[1]){
+    chip8->V[1] = 1;
   }
-  chip8->pc -= 2;
 }
 
 // Fx15: Set delay timer = Vx
@@ -491,8 +477,9 @@ void process_instruction(Chip8 *chip8) {
 
   // an opcode consists of 4 bytes with the following encoding
   // examples: [0xVxy0], [0xVnnn], [0xV00n], etc.
-  u8 x = (chip8->opcode & 0x0F00) >> 8;
-  u8 y = (chip8->opcode & 0x00F0) >> 4;
+
+  // u8 x = (chip8->opcode & 0x0F00) >> 8;
+  // u8 y = (chip8->opcode & 0x00F0) >> 4;
   // u16 nnn = (chip8->opcode & 0x0FFF);
   // u8 nn = (chip8->opcode & 0x00FF);
   // u8 n = (chip8->opcode & 0x000F);
@@ -772,7 +759,8 @@ int main(int argc, char **argv) {
   Chip8 chip8 = {0};
   init_chip8(&chip8);
   //load_rom(&chip8, "IBM.ch8");
-  load_rom(&chip8, "fulltest.ch8");
+  // load_rom(&chip8, "fulltest.ch8");
+   load_rom(&chip8, "4-flags.ch8");
 
   InitWindow(SCREEN_WIDTH * CELL_SIZE, SCREEN_HEIGHT * CELL_SIZE, "CHIP8 Emulator");
   SetTargetFPS(60);
