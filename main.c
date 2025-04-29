@@ -226,13 +226,13 @@ void op_8xy4(Chip8 *chip8) {
 
   u16 sum = (chip8->V[x] + chip8->V[y]);
 
+  chip8->V[x] = sum & 0xFF;
+
   if (sum > 255) {
     chip8->V[0xF] = 1;
   } else {
     chip8->V[0xF] = 0;
   }
-
-  chip8->V[x] = sum & 0xFF;
 }
 
 // If Vx > Vy, then VF is set to 1, otherwise 0. Then Vy is subtracted from Vx,
@@ -242,12 +242,13 @@ void op_8xy5(Chip8 *chip8) {
   u8 x = (chip8->opcode & 0x0F00) >> 8;
   u8 y = (chip8->opcode & 0x00F0) >> 4;
 
-  if (chip8->V[x] > chip8->V[y]) {
+  u8 temp = chip8->V[x];
+  chip8->V[x] -= chip8->V[y];
+  if (temp >= chip8->V[y]) {
     chip8->V[0xF] = 1;
   } else {
     chip8->V[0xF] = 0;
   }
-  chip8->V[x] -= chip8->V[y];
 }
 
 // If the least-significant bit of Vx is 1, then VF is set to 1, otherwise 0.
@@ -256,10 +257,12 @@ void op_8xy5(Chip8 *chip8) {
 // 8xy6: Set Vx = Vx SHR 1
 void op_8xy6(Chip8 *chip8) {
   u8 x = (chip8->opcode & 0x0F00) >> 8;
+  u8 y = (chip8->opcode & 0x00F0) >> 4;
 
-  chip8->V[0xF] = (chip8->V[x] & 0x0001);
-
+  chip8->V[x] = chip8->V[y];
+  u8 lsb = chip8->V[x] & 0x0001;
   chip8->V[x] >>= 1;
+  chip8->V[0xF] = lsb; 
 }
 
 // If Vy > Vx, then VF is set to 1, otherwise 0.
@@ -269,13 +272,14 @@ void op_8xy7(Chip8 *chip8) {
   u8 x = (chip8->opcode & 0x0F00) >> 8;
   u8 y = (chip8->opcode & 0x00F0) >> 4;
 
-  if (chip8->V[y] > chip8->V[x]) {
+  u8 temp = chip8->V[x];
+  chip8->V[x] = (chip8->V[y] - chip8->V[x]);
+  if (temp <= chip8->V[y]) {
     chip8->V[0xF] = 1;
   } else {
     chip8->V[0xF] = 0;
   }
 
-  chip8->V[x] = (chip8->V[y] - chip8->V[x]);
 }
 
 // If the most-significant bit of Vx is 1, then VF is set to 1, otherwise to 0.
@@ -285,9 +289,14 @@ void op_8xy7(Chip8 *chip8) {
 // 8xyE: Set Vx = Vx SHL 1.
 void op_8xyE(Chip8 *chip8) {
   u8 x = (chip8->opcode & 0x0F00) >> 8;
+  u8 y = (chip8->opcode & 0x00F0) >> 4;
 
-  chip8->V[0xF] = (chip8->V[x] & 0x80) >> 7;
+  chip8->V[x] = chip8->V[y];
+
+  // msb: 1111 0000 >> 7 = 0000 00011
+  u8 msb = (chip8->V[x] & 0xF0) >> 7; 
   chip8->V[x] <<= 1;
+  chip8->V[0xF] = msb; 
 }
 
 // 9xy0: Skip next instruction if Vx != Vy
@@ -392,10 +401,40 @@ void op_Fx07(Chip8 *chip8) {
 void op_Fx0A(Chip8 *chip8) {
   u8 x = (chip8->opcode & 0x0F00) >> 8;
   // TODO: add all remaining keypad
-  if (chip8->keypad[0]){
-    chip8->V[0] = 0;
-  } else if (chip8->keypad[1]){
-    chip8->V[1] = 1;
+  if (chip8->keypad[0]) {
+    chip8->V[x] = 0;
+  } else if (chip8->keypad[1]) {
+    chip8->V[x] = 1;
+  } else if (chip8->keypad[2]) {
+    chip8->V[x] = 2;
+  } else if (chip8->keypad[3]) {
+    chip8->V[x] = 3;
+  } else if (chip8->keypad[4]) {
+    chip8->V[x] = 4;
+  } else if (chip8->keypad[5]) {
+    chip8->V[x] = 5;
+  } else if (chip8->keypad[6]) {
+    chip8->V[x] = 6;
+  } else if (chip8->keypad[7]) {
+    chip8->V[x] = 7;
+  } else if (chip8->keypad[8]) {
+    chip8->V[x] = 8;
+  } else if (chip8->keypad[9]) {
+    chip8->V[x] = 9;
+  } else if (chip8->keypad[10]) {
+    chip8->V[x] = 10;
+  } else if (chip8->keypad[11]) {
+    chip8->V[x] = 11;
+  } else if (chip8->keypad[12]) {
+    chip8->V[x] = 12;
+  } else if (chip8->keypad[13]) {
+    chip8->V[x] = 13;
+  } else if (chip8->keypad[14]) {
+    chip8->V[x] = 14;
+  } else if (chip8->keypad[15]) {
+    chip8->V[x] = 15;
+  } else {
+    chip8->pc -= 2;
   }
 }
 
@@ -465,7 +504,7 @@ void op_Fx65(Chip8 *chip8) {
 void process_instruction(Chip8 *chip8) {
 
   /* Fetch */
-  
+
   // Catch first byte and second byte separatly because memory is u8
   // but an instruction consists of 2 bytes
   chip8->opcode = (chip8->memory[chip8->pc]);
@@ -528,44 +567,44 @@ void process_instruction(Chip8 *chip8) {
     break;
   }
   case (0x8000): {
-      switch(chip8->opcode & 0x000F){
-        case (0x0000): {
-          op_8xy0(chip8);
-          break;
-        }
-        case (0x0001): {
-          op_8xy1(chip8);
-          break;
-        }
-        case (0x0002): {
-          op_8xy2(chip8);
-          break;
-        }
-        case (0x0003): {
-          op_8xy3(chip8);
-          break;
-        }
-        case (0x0004): {
-          op_8xy4(chip8);
-          break;
-        }
-        case (0x0005): {
-          op_8xy5(chip8);
-          break;
-        }
-        case (0x0006): {
-          op_8xy6(chip8);
-          break;
-        }
-        case (0x0007): {
-          op_8xy7(chip8);
-          break;
-        }
-        case (0x000E): {
-          op_8xyE(chip8);
-          break;
-        }
-      }
+    switch (chip8->opcode & 0x000F) {
+    case (0x0000): {
+      op_8xy0(chip8);
+      break;
+    }
+    case (0x0001): {
+      op_8xy1(chip8);
+      break;
+    }
+    case (0x0002): {
+      op_8xy2(chip8);
+      break;
+    }
+    case (0x0003): {
+      op_8xy3(chip8);
+      break;
+    }
+    case (0x0004): {
+      op_8xy4(chip8);
+      break;
+    }
+    case (0x0005): {
+      op_8xy5(chip8);
+      break;
+    }
+    case (0x0006): {
+      op_8xy6(chip8);
+      break;
+    }
+    case (0x0007): {
+      op_8xy7(chip8);
+      break;
+    }
+    case (0x000E): {
+      op_8xyE(chip8);
+      break;
+    }
+    }
     break;
   }
   case (0x9000): {
@@ -589,57 +628,57 @@ void process_instruction(Chip8 *chip8) {
     break;
   }
   case (0xE000): {
-      switch(chip8->opcode & 0x00FF){
-        case (0x009E): {
-          op_Ex9E(chip8);
-          break;
-        }
-        case (0x00A1): {
-          op_ExA1(chip8);
-          break;
-        }
-      }
+    switch (chip8->opcode & 0x00FF) {
+    case (0x009E): {
+      op_Ex9E(chip8);
+      break;
+    }
+    case (0x00A1): {
+      op_ExA1(chip8);
+      break;
+    }
+    }
     break;
   }
   case (0xF000): {
-      switch(chip8->opcode & 0x00FF){
-        case (0x0007): {
-          op_Fx07(chip8);
-          break;
-        }
-        case (0x000A): {
-          op_Fx0A(chip8);
-          break;
-        }
-        case (0x0015): {
-          op_Fx15(chip8);
-          break;
-        }
-        case (0x0018): {
-          op_Fx18(chip8);
-          break;
-        }
-        case (0x001E): {
-          op_Fx1E(chip8);
-          break;
-        }
-        case (0x0029): {
-          op_Fx29(chip8);
-          break;
-        }
-        case (0x0033): {
-          op_Fx33(chip8);
-          break;
-        }
-        case (0x0055): {
-          op_Fx55(chip8);
-          break;
-        }
-        case (0x0065): {
-          op_Fx65(chip8);
-          break;
-        }
-      }
+    switch (chip8->opcode & 0x00FF) {
+    case (0x0007): {
+      op_Fx07(chip8);
+      break;
+    }
+    case (0x000A): {
+      op_Fx0A(chip8);
+      break;
+    }
+    case (0x0015): {
+      op_Fx15(chip8);
+      break;
+    }
+    case (0x0018): {
+      op_Fx18(chip8);
+      break;
+    }
+    case (0x001E): {
+      op_Fx1E(chip8);
+      break;
+    }
+    case (0x0029): {
+      op_Fx29(chip8);
+      break;
+    }
+    case (0x0033): {
+      op_Fx33(chip8);
+      break;
+    }
+    case (0x0055): {
+      op_Fx55(chip8);
+      break;
+    }
+    case (0x0065): {
+      op_Fx65(chip8);
+      break;
+    }
+    }
     break;
   }
   default: {
@@ -671,86 +710,87 @@ void process_instruction(Chip8 *chip8) {
     +-+-+-+-+    +-+-+-+-+
  *********************************/
 
-void update_input_keys(u8 keypad[]) {
+void update_input_keys(Chip8 *chip8) {
   if (IsKeyDown(KEY_ONE)) {
-    keypad[0x0] = 1;
+    chip8->keypad[0x0] = 1;
+    printf("Key 1 was pressed\n");
   } else if (IsKeyUp(KEY_ONE)) {
-    keypad[0x0] = 0;
+    chip8->keypad[0x0] = 0;
   }
   if (IsKeyDown(KEY_TWO)) {
-    keypad[0x1] = 1;
+    chip8->keypad[0x1] = 1;
   } else if (IsKeyUp(KEY_TWO)) {
-    keypad[0x1] = 0;
+    chip8->keypad[0x1] = 0;
   }
   if (IsKeyDown(KEY_THREE)) {
-    keypad[0x2] = 1;
+    chip8->keypad[0x2] = 1;
   } else if (IsKeyUp(KEY_THREE)) {
-    keypad[0x2] = 0;
+    chip8->keypad[0x2] = 0;
   }
   if (IsKeyDown(KEY_FOUR)) {
-    keypad[0x3] = 1;
+    chip8->keypad[0x3] = 1;
   } else if (IsKeyUp(KEY_FOUR)) {
-    keypad[0x3] = 0;
+    chip8->keypad[0x3] = 0;
   }
   if (IsKeyDown(KEY_Q)) {
-    keypad[0x4] = 1;
+    chip8->keypad[0x4] = 1;
   } else if (IsKeyUp(KEY_Q)) {
-    keypad[0x4] = 0;
+    chip8->keypad[0x4] = 0;
   }
   if (IsKeyDown(KEY_W)) {
-    keypad[0x5] = 1;
+    chip8->keypad[0x5] = 1;
   } else if (IsKeyUp(KEY_W)) {
-    keypad[0x5] = 0;
+    chip8->keypad[0x5] = 0;
   }
   if (IsKeyDown(KEY_E)) {
-    keypad[0x6] = 1;
+    chip8->keypad[0x6] = 1;
   } else if (IsKeyUp(KEY_E)) {
-    keypad[0x6] = 0;
+    chip8->keypad[0x6] = 0;
   }
   if (IsKeyDown(KEY_R)) {
-    keypad[0x7] = 1;
+    chip8->keypad[0x7] = 1;
   } else if (IsKeyUp(KEY_R)) {
-    keypad[0x7] = 0;
+    chip8->keypad[0x7] = 0;
   }
   if (IsKeyDown(KEY_A)) {
-    keypad[0x8] = 1;
+    chip8->keypad[0x8] = 1;
   } else if (IsKeyUp(KEY_A)) {
-    keypad[0x8] = 0;
+    chip8->keypad[0x8] = 0;
   }
   if (IsKeyDown(KEY_S)) {
-    keypad[0x9] = 1;
+    chip8->keypad[0x9] = 1;
   } else if (IsKeyUp(KEY_S)) {
-    keypad[0x9] = 0;
+    chip8->keypad[0x9] = 0;
   }
   if (IsKeyDown(KEY_D)) {
-    keypad[0xA] = 1;
+    chip8->keypad[0xA] = 1;
   } else if (IsKeyUp(KEY_D)) {
-    keypad[0xA] = 0;
+    chip8->keypad[0xA] = 0;
   }
   if (IsKeyDown(KEY_F)) {
-    keypad[0xB] = 1;
+    chip8->keypad[0xB] = 1;
   } else if (IsKeyUp(KEY_F)) {
-    keypad[0xB] = 0;
+    chip8->keypad[0xB] = 0;
   }
   if (IsKeyDown(KEY_Y)) {
-    keypad[0xC] = 1;
+    chip8->keypad[0xC] = 1;
   } else if (IsKeyUp(KEY_Y)) {
-    keypad[0xC] = 0;
+    chip8->keypad[0xC] = 0;
   }
   if (IsKeyDown(KEY_X)) {
-    keypad[0xD] = 1;
+    chip8->keypad[0xD] = 1;
   } else if (IsKeyUp(KEY_X)) {
-    keypad[0xD] = 0;
+    chip8->keypad[0xD] = 0;
   }
   if (IsKeyDown(KEY_C)) {
-    keypad[0xE] = 1;
+    chip8->keypad[0xE] = 1;
   } else if (IsKeyUp(KEY_C)) {
-    keypad[0xE] = 0;
+    chip8->keypad[0xE] = 0;
   }
   if (IsKeyDown(KEY_V)) {
-    keypad[0xF] = 1;
+    chip8->keypad[0xF] = 1;
   } else if (IsKeyUp(KEY_V)) {
-    keypad[0xF] = 0;
+    chip8->keypad[0xF] = 0;
   }
 }
 
@@ -758,14 +798,16 @@ int main(int argc, char **argv) {
 
   Chip8 chip8 = {0};
   init_chip8(&chip8);
-  //load_rom(&chip8, "IBM.ch8");
-  // load_rom(&chip8, "fulltest.ch8");
-   load_rom(&chip8, "4-flags.ch8");
+  // load_rom(&chip8, "IBM.ch8");
+  //  load_rom(&chip8, "fulltest.ch8");
+  //load_rom(&chip8, "4-flags.ch8");
+  // load_rom(&chip8, "5-quirks.ch8");
+  load_rom(&chip8, "6-keypad.ch8");
 
   InitWindow(SCREEN_WIDTH * CELL_SIZE, SCREEN_HEIGHT * CELL_SIZE, "CHIP8 Emulator");
   SetTargetFPS(60);
   while (!WindowShouldClose()) {
-    update_input_keys(chip8.keypad);
+    update_input_keys(&chip8);
     process_instruction(&chip8);
 
     BeginDrawing();
