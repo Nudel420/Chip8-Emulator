@@ -262,7 +262,7 @@ void op_8xy6(Chip8 *chip8) {
   chip8->V[x] = chip8->V[y];
   u8 lsb = chip8->V[x] & 0x0001;
   chip8->V[x] >>= 1;
-  chip8->V[0xF] = lsb; 
+  chip8->V[0xF] = lsb;
 }
 
 // If Vy > Vx, then VF is set to 1, otherwise 0.
@@ -279,7 +279,6 @@ void op_8xy7(Chip8 *chip8) {
   } else {
     chip8->V[0xF] = 0;
   }
-
 }
 
 // If the most-significant bit of Vx is 1, then VF is set to 1, otherwise to 0.
@@ -294,9 +293,9 @@ void op_8xyE(Chip8 *chip8) {
   chip8->V[x] = chip8->V[y];
 
   // msb: 1111 0000 >> 7 = 0000 00011
-  u8 msb = (chip8->V[x] & 0xF0) >> 7; 
+  u8 msb = (chip8->V[x] & 0xF0) >> 7;
   chip8->V[x] <<= 1;
-  chip8->V[0xF] = msb; 
+  chip8->V[0xF] = msb;
 }
 
 // 9xy0: Skip next instruction if Vx != Vy
@@ -715,6 +714,7 @@ void update_input_keys(Chip8 *chip8) {
     chip8->keypad[0x0] = 1;
     printf("Key 1 was pressed\n");
   } else if (IsKeyUp(KEY_ONE)) {
+    printf("Key 1 is not pressed\n");
     chip8->keypad[0x0] = 0;
   }
   if (IsKeyDown(KEY_TWO)) {
@@ -799,10 +799,12 @@ int main(int argc, char **argv) {
   Chip8 chip8 = {0};
   init_chip8(&chip8);
   // load_rom(&chip8, "IBM.ch8");
-  //  load_rom(&chip8, "fulltest.ch8");
-  //load_rom(&chip8, "4-flags.ch8");
+  // load_rom(&chip8, "br8kout.ch8");
+  // load_rom(&chip8, "fulltest.ch8");
+  // load_rom(&chip8, "4-flags.ch8");
   // load_rom(&chip8, "5-quirks.ch8");
-  load_rom(&chip8, "6-keypad.ch8");
+  // load_rom(&chip8, "6-keypad.ch8");
+  load_rom(&chip8, "Space.ch8");
 
   InitWindow(SCREEN_WIDTH * CELL_SIZE, SCREEN_HEIGHT * CELL_SIZE, "CHIP8 Emulator");
   SetTargetFPS(60);
@@ -821,6 +823,7 @@ int main(int argc, char **argv) {
     }
     // DrawText(TextFormat("Keypad 4: %X\n", chip8.keypad[3]), 10, 10, 20, RED);
     EndDrawing();
+    
   }
   return 0;
 }
