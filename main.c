@@ -198,6 +198,7 @@ void op_8xy1(Chip8 *chip8) {
   u8 x = (chip8->opcode & 0x0F00) >> 8;
   u8 y = (chip8->opcode & 0x00F0) >> 4;
   chip8->V[x] |= chip8->V[y];
+  chip8->V[0xF] = 0;
 }
 
 // 8xy2: Set Vx = Vx AND Vy
@@ -205,6 +206,7 @@ void op_8xy2(Chip8 *chip8) {
   u8 x = (chip8->opcode & 0x0F00) >> 8;
   u8 y = (chip8->opcode & 0x00F0) >> 4;
   chip8->V[x] &= chip8->V[y];
+  chip8->V[0xF] = 0;
 }
 
 // 8xy3: Set Vx = Vx XOR Vy
@@ -212,6 +214,7 @@ void op_8xy3(Chip8 *chip8) {
   u8 x = (chip8->opcode & 0x0F00) >> 8;
   u8 y = (chip8->opcode & 0x00F0) >> 4;
   chip8->V[x] ^= chip8->V[y];
+  chip8->V[0xF] = 0;
 }
 
 // The values of Vx and Vy are added together. If the result is greater
@@ -684,14 +687,6 @@ void process_instruction(Chip8 *chip8) {
     printf("unknown opcode [0x0000]: 0x%X\n", chip8->opcode);
   }
   }
-
-  // decrement timers if they have been set
-  if (chip8->delay_timer > 0) {
-    chip8->delay_timer--;
-  }
-  if (chip8->sound_timer > 0) {
-    chip8->sound_timer--;
-  }
 }
 
 /*********************************
@@ -794,6 +789,24 @@ void update_input_keys(Chip8 *chip8) {
   }
 }
 
+void handleInput(Chip8 *chip8) {
+  chip8->keypad[0x0] = IsKeyDown(KEY_X);
+  chip8->keypad[0x1] = IsKeyDown(KEY_ONE);
+  chip8->keypad[0x2] = IsKeyDown(KEY_TWO);
+  chip8->keypad[0x3] = IsKeyDown(KEY_THREE);
+  chip8->keypad[0x4] = IsKeyDown(KEY_Q);
+  chip8->keypad[0x5] = IsKeyDown(KEY_W);
+  chip8->keypad[0x6] = IsKeyDown(KEY_E);
+  chip8->keypad[0x7] = IsKeyDown(KEY_A);
+  chip8->keypad[0x8] = IsKeyDown(KEY_S);
+  chip8->keypad[0x9] = IsKeyDown(KEY_D);
+  chip8->keypad[0xA] = IsKeyDown(KEY_Y);
+  chip8->keypad[0xB] = IsKeyDown(KEY_C);
+  chip8->keypad[0xC] = IsKeyDown(KEY_FOUR);
+  chip8->keypad[0xD] = IsKeyDown(KEY_R);
+  chip8->keypad[0xE] = IsKeyDown(KEY_F);
+  chip8->keypad[0xF] = IsKeyDown(KEY_V);
+}
 int main(int argc, char **argv) {
 
   Chip8 chip8 = {0};
@@ -803,27 +816,42 @@ int main(int argc, char **argv) {
   // load_rom(&chip8, "fulltest.ch8");
   // load_rom(&chip8, "4-flags.ch8");
   // load_rom(&chip8, "5-quirks.ch8");
-  // load_rom(&chip8, "6-keypad.ch8");
-  load_rom(&chip8, "Space.ch8");
+  load_rom(&chip8, "6-keypad.ch8");
+  // load_rom(&chip8, "Space.ch8");
+
+  const double cycle_delay = 1.0 / 500.0; // 500 Hz
+  const double timer_delay = 1.0 / 60.0;  // 60 Hz
+  double last_instruction_time = GetTime();
+  // double last_timer_update_time = GetTime();
 
   InitWindow(SCREEN_WIDTH * CELL_SIZE, SCREEN_HEIGHT * CELL_SIZE, "CHIP8 Emulator");
   SetTargetFPS(60);
   while (!WindowShouldClose()) {
-    update_input_keys(&chip8);
-    process_instruction(&chip8);
+
+    double now = GetTime();
+    handleInput(&chip8);
+
+    // update instructions with 700Hz
+    double instruction_interval = 1.0 / 700;
+    while((now - last_instruction_time) >= instruction_interval){
+      process_instruction(&chip8);
+      last_instruction_time += instruction_interval;
+    }
+
+    // update timers with 60Hz
+    if(chip8.delay_timer > 0)chip8.delay_timer --;
+    if(chip8.sound_timer > 0)chip8.sound_timer --;
 
     BeginDrawing();
-    ClearBackground(LIGHTGRAY);
+    ClearBackground(BLACK);
     for (int i = 0; i < SCREEN_HEIGHT; i++) {
       for (int j = 0; j < SCREEN_WIDTH; j++) {
         if (chip8.video[i][j]) {
-          DrawRectangle(j * CELL_SIZE, i * CELL_SIZE, CELL_SIZE, CELL_SIZE, BLACK);
+          DrawRectangle(j * CELL_SIZE, i * CELL_SIZE, CELL_SIZE, CELL_SIZE, WHITE);
         }
       }
     }
-    // DrawText(TextFormat("Keypad 4: %X\n", chip8.keypad[3]), 10, 10, 20, RED);
     EndDrawing();
-    
   }
   return 0;
 }
