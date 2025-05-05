@@ -704,91 +704,6 @@ void process_instruction(Chip8 *chip8) {
     +-+-+-+-+    +-+-+-+-+
  *********************************/
 
-void update_input_keys(Chip8 *chip8) {
-  if (IsKeyDown(KEY_ONE)) {
-    chip8->keypad[0x0] = 1;
-    printf("Key 1 was pressed\n");
-  } else if (IsKeyUp(KEY_ONE)) {
-    printf("Key 1 is not pressed\n");
-    chip8->keypad[0x0] = 0;
-  }
-  if (IsKeyDown(KEY_TWO)) {
-    chip8->keypad[0x1] = 1;
-  } else if (IsKeyUp(KEY_TWO)) {
-    chip8->keypad[0x1] = 0;
-  }
-  if (IsKeyDown(KEY_THREE)) {
-    chip8->keypad[0x2] = 1;
-  } else if (IsKeyUp(KEY_THREE)) {
-    chip8->keypad[0x2] = 0;
-  }
-  if (IsKeyDown(KEY_FOUR)) {
-    chip8->keypad[0x3] = 1;
-  } else if (IsKeyUp(KEY_FOUR)) {
-    chip8->keypad[0x3] = 0;
-  }
-  if (IsKeyDown(KEY_Q)) {
-    chip8->keypad[0x4] = 1;
-  } else if (IsKeyUp(KEY_Q)) {
-    chip8->keypad[0x4] = 0;
-  }
-  if (IsKeyDown(KEY_W)) {
-    chip8->keypad[0x5] = 1;
-  } else if (IsKeyUp(KEY_W)) {
-    chip8->keypad[0x5] = 0;
-  }
-  if (IsKeyDown(KEY_E)) {
-    chip8->keypad[0x6] = 1;
-  } else if (IsKeyUp(KEY_E)) {
-    chip8->keypad[0x6] = 0;
-  }
-  if (IsKeyDown(KEY_R)) {
-    chip8->keypad[0x7] = 1;
-  } else if (IsKeyUp(KEY_R)) {
-    chip8->keypad[0x7] = 0;
-  }
-  if (IsKeyDown(KEY_A)) {
-    chip8->keypad[0x8] = 1;
-  } else if (IsKeyUp(KEY_A)) {
-    chip8->keypad[0x8] = 0;
-  }
-  if (IsKeyDown(KEY_S)) {
-    chip8->keypad[0x9] = 1;
-  } else if (IsKeyUp(KEY_S)) {
-    chip8->keypad[0x9] = 0;
-  }
-  if (IsKeyDown(KEY_D)) {
-    chip8->keypad[0xA] = 1;
-  } else if (IsKeyUp(KEY_D)) {
-    chip8->keypad[0xA] = 0;
-  }
-  if (IsKeyDown(KEY_F)) {
-    chip8->keypad[0xB] = 1;
-  } else if (IsKeyUp(KEY_F)) {
-    chip8->keypad[0xB] = 0;
-  }
-  if (IsKeyDown(KEY_Y)) {
-    chip8->keypad[0xC] = 1;
-  } else if (IsKeyUp(KEY_Y)) {
-    chip8->keypad[0xC] = 0;
-  }
-  if (IsKeyDown(KEY_X)) {
-    chip8->keypad[0xD] = 1;
-  } else if (IsKeyUp(KEY_X)) {
-    chip8->keypad[0xD] = 0;
-  }
-  if (IsKeyDown(KEY_C)) {
-    chip8->keypad[0xE] = 1;
-  } else if (IsKeyUp(KEY_C)) {
-    chip8->keypad[0xE] = 0;
-  }
-  if (IsKeyDown(KEY_V)) {
-    chip8->keypad[0xF] = 1;
-  } else if (IsKeyUp(KEY_V)) {
-    chip8->keypad[0xF] = 0;
-  }
-}
-
 void handleInput(Chip8 *chip8) {
   chip8->keypad[0x0] = IsKeyDown(KEY_X);
   chip8->keypad[0x1] = IsKeyDown(KEY_ONE);
@@ -811,19 +726,19 @@ int main(int argc, char **argv) {
 
   Chip8 chip8 = {0};
   init_chip8(&chip8);
+
+        /* ROMS */
   // load_rom(&chip8, "IBM.ch8");
   // load_rom(&chip8, "br8kout.ch8");
   // load_rom(&chip8, "fulltest.ch8");
   // load_rom(&chip8, "4-flags.ch8");
   // load_rom(&chip8, "5-quirks.ch8");
-  load_rom(&chip8, "6-keypad.ch8");
+  // load_rom(&chip8, "6-keypad.ch8");
   // load_rom(&chip8, "Space.ch8");
+  load_rom(&chip8, "binding.ch8");
 
-  const double cycle_delay = 1.0 / 500.0; // 500 Hz
-  const double timer_delay = 1.0 / 60.0;  // 60 Hz
+
   double last_instruction_time = GetTime();
-  // double last_timer_update_time = GetTime();
-
   InitWindow(SCREEN_WIDTH * CELL_SIZE, SCREEN_HEIGHT * CELL_SIZE, "CHIP8 Emulator");
   SetTargetFPS(60);
   while (!WindowShouldClose()) {
@@ -833,9 +748,11 @@ int main(int argc, char **argv) {
 
     // update instructions with 700Hz
     double instruction_interval = 1.0 / 700;
+    int test = 0;
     while((now - last_instruction_time) >= instruction_interval){
       process_instruction(&chip8);
       last_instruction_time += instruction_interval;
+      test++;
     }
 
     // update timers with 60Hz
